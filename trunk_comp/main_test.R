@@ -3,67 +3,35 @@
 # Remove everything from Memory
 rm(list = ls())
 
-# Shifting the column
-shift_vec <- function(x, n){
- return( c( rep(NA, n), x[1:(length(x)-n)]))
-}
+# Switch off warnings
+options(warn=-1)
 
-
-# Outlier detection
-Identify_Outliers <- function(data_set, features_to_ignore=c(),
-                              outlier_sd_threshold = 3,
-                              remove_outlier_observations = FALSE
-                              )
+replace_feat_with_freq <- function(dataset,feat,LUT)
+{
+  
+  new_col=paste0(feat,"_freq")
+  Nrows <- nrow(LUT)
+  i<-1
+  while (i<(Nrows+1) )
   {
-  # get standard deviation for each feature
-  require(dplyr)
-  outliers <- c()
-  total_outliers<-0
- 
-  for (feature_name in setdiff(names(data_set),features_to_ignore)) {
-    feature_mean <- mean(data_set[,feature_name], na.rm = TRUE)
-    feature_sd <- sd(data_set[,feature_name], na.rm = TRUE)
-    outlier_count <- sum( data_set[,feature_name] > (feature_mean + (feature_sd * outlier_sd_threshold)) |  data_set[,feature_name] < (feature_mean - (feature_sd * outlier_sd_threshold)))
-    #print(paste0(feature_name,":",outlier_count))
-    total_outliers<-total_outliers+outlier_count
-    #print(feature_name)
-    if (outlier_count > 0) 
-      {
-      outliers <- rbind(outliers, c(feature_name, outlier_count))
+    name <- as.character(LUT[i,1])
+    #print(name)
+    if(length(dataset[, feat ]==name    )>0)
+    {
       
-      if(remove_outlier_observations)
-      {
-        inds <-  data_set[,feature_name] > (feature_mean + (feature_sd * outlier_sd_threshold)) |  data_set[,feature_name] < (feature_mean - (feature_sd * outlier_sd_threshold))
-        
-        v = seq(1:length(inds))
-        locs<-v[inds]
-        #origRows <- nrow(data_set)
-        data_set<-data_set[-locs,]
-        #currentRows <- nrow(data_set)
-        #print(sum(inds))
-        #print(paste0(feature_name," reduced ",(origRows-currentRows)))
-        
-        }
-      
-      
-      }
+      dataset[  dataset[, feat ]==name  ,new_col]<-LUT[ LUT[,feat]   ==name  ,"Freq"]
+      #print(dataset[  dataset[, feat ]==name  ,new_col])
+      #print(LUT[ LUT[,feat]   ==name  ,"Freq"])
+    }
+    i<-i+1
   }
-  outliers <- rbind(outliers, c("Total", total_outliers))
-  outliers <- data.frame(outliers) %>% dplyr::rename(feature_name=X1, outlier_count=X2) %>%
-    mutate(outlier_count=as.numeric(as.character(outlier_count))) %>% arrange(desc(outlier_count))
+  return(dataset)
   
-  
-  if (remove_outlier_observations) {
-    return(data_set)
-  } else {
-    return(outliers)
-  }
 }
 
-# Column operations
 mult_columns <- function(col1,col2)
 {
-    return(as.numeric(col1)*as.numeric(col2))
+  return(as.numeric(col1)*as.numeric(col2))
 }
 sum_columns <- function(col1,col2)
 {
@@ -75,11 +43,11 @@ sub_columns <- function(col1,col2)
 }
 log_columns <- function(col,minVal)
 {
-    return(log(1+as.numeric(col)-as.numeric(minVal)))
+  return(log(1+as.numeric(col)-as.numeric(minVal)))
 }
 
 
-# Save a plot
+
 savePlot <- function(myPlot,figName) {
   #pdf(fileName)
   png(figName)
@@ -96,21 +64,21 @@ continuous_discrete_correlation<-function(data_set, cont_var, disc_var)
   require(ggplot2)
   if(FALSE)
   {
-  png(paste("figs/ANOVA_",cont_var,"_",disc_var,"_plot.png"))
-  boxplot(as.formula(paste(cont_var," ~ ", disc_var)),data=data_set, main=fval,xlab=disc_var, ylab=cont_var,outline=FALSE)
-  means_obj <- aggregate(as.formula(paste(cont_var," ~ ", disc_var)), data_set, mean)
-  means<-means_obj[,cont_var]
-  points(1:2, means, pch = 23, cex = 0.75,bg = "red")
-  text(1:2 - 0.4, means, labels = formatC(means, format = "f",digits = 1),pos = 2, cex = 0.9, col = "red")
-  dev.off()
- }else{ 
-  figName<-paste("figs/ANOVA_",cont_var,"_",disc_var,"_plot.png")
-  #myPlot <- ggplot(data_set, aes_string(factor(disc_var), cont_var))+ geom_violin()+ labs(title = fval)
-  #data_set[,disc_var]<-factor(as.character(data_set[,disc_var]))
-  myPlot <- ggplot(data_set, aes_string(factor(data_set[[disc_var]]), cont_var))+ geom_violin()+ labs(x=disc_var,title = fval)+ geom_violin(trim = FALSE)+ stat_summary(fun.y=mean, geom="point", shape=23, size=2, color="red")
-  
-  savePlot(myPlot,figName)
- }
+    png(paste("figs/ANOVA_",cont_var,"_",disc_var,"_plot.png"))
+    boxplot(as.formula(paste(cont_var," ~ ", disc_var)),data=data_set, main=fval,xlab=disc_var, ylab=cont_var,outline=FALSE)
+    means_obj <- aggregate(as.formula(paste(cont_var," ~ ", disc_var)), data_set, mean)
+    means<-means_obj[,cont_var]
+    points(1:2, means, pch = 23, cex = 0.75,bg = "red")
+    text(1:2 - 0.4, means, labels = formatC(means, format = "f",digits = 1),pos = 2, cex = 0.9, col = "red")
+    dev.off()
+  }else{ 
+    figName<-paste("figs/ANOVA_",cont_var,"_",disc_var,"_plot.png")
+    #myPlot <- ggplot(data_set, aes_string(factor(disc_var), cont_var))+ geom_violin()+ labs(title = fval)
+    #data_set[,disc_var]<-factor(as.character(data_set[,disc_var]))
+    myPlot <- ggplot(data_set, aes_string(factor(data_set[[disc_var]]), cont_var))+ geom_violin()+ labs(x=disc_var,title = fval)+ geom_violin(trim = FALSE)+ stat_summary(fun.y=mean, geom="point", shape=23, size=2, color="red")
+    
+    savePlot(myPlot,figName)
+  }
   return(fval)
 }
 
@@ -143,6 +111,7 @@ discrete_discrete_correlation<-function(data_set, disc_x, disc_y)
 # Function to move the target to the end of the dataset
 target_to_the_end <- function(data_set,targ_Name)
 {
+  
   tmp <-data.frame(data_set[,targ_Name])
   colnames(tmp)<-targ_Name
   data_set[,targ_Name]<-NULL
@@ -150,17 +119,6 @@ target_to_the_end <- function(data_set,targ_Name)
   return(dataset_ret)
   
 }
-
-
-Feature_Engineer_Hour<-function(POSIxct_str)
-{
-  
-  
-  
-  
-}
-
-
 
 #------------ FUNCTIONS
 # Formatting the dates to extract:
@@ -174,18 +132,18 @@ Feature_Engineer_Dates <- function(data_set, remove_original_date=TRUE) {
   data_set <- data.frame(data_set)
   date_features <- names(data_set[sapply(data_set, is.Date)])
   for (feature_name in date_features) {
-    #data_set[,paste0(feature_name,'_DateInt')] <- as.numeric(data_set[,feature_name])
+    data_set[,paste0(feature_name,'_DateInt')] <- as.numeric(data_set[,feature_name])
     #data_set[,paste0(feature_name,'_Month')] <- as.integer(format(data_set[,feature_name], "%m"))
     #data_set[,paste0(feature_name,'_ShortYear')] <- as.integer(format(data_set[,feature_name], "%y"))
     #data_set[,paste0(feature_name,'_LongYear')] <- as.integer(format(data_set[,feature_name], "%Y"))
     #data_set[,paste0(feature_name,'_Day')] <- as.integer(format(data_set[,feature_name], "%d"))
     # week day number requires first pulling the weekday label, creating the 7 week day levels, and casting to integer
-    data_set[,paste0(feature_name,'_WeekDayNumber')] <- as.factor(weekdays(data_set[,feature_name]))
-    levels(data_set[,paste0(feature_name,'_WeekDayNumber')]) <- list(Monday=1, Tuesday=2, Wednesday=3, Thursday=4, Friday=5, Saturday=6, Sunday=7)
-    data_set[,paste0(feature_name,'_WeekDayNumber')] <- as.integer(data_set[,paste0(feature_name,'_WeekDayNumber')])
+    #data_set[,paste0(feature_name,'_WeekDayNumber')] <- as.factor(weekdays(data_set[,feature_name]))
+    #levels(data_set[,paste0(feature_name,'_WeekDayNumber')]) <- list(Monday=1, Tuesday=2, Wednesday=3, Thursday=4, Friday=5, Saturday=6, Sunday=7)
+    #data_set[,paste0(feature_name,'_WeekDayNumber')] <- as.integer(data_set[,paste0(feature_name,'_WeekDayNumber')])
     #data_set[,paste0(feature_name,'_IsWeekend')] <- as.numeric(grepl("Saturday|Sunday", weekdays(data_set[,feature_name])))
     #data_set[,paste0(feature_name,'_YearDayCount')] <- yday(data_set[,feature_name])
-    data_set[,paste0(feature_name,'_Quarter')] <- lubridate::quarter(data_set[,feature_name], with_year = FALSE)
+    #data_set[,paste0(feature_name,'_Quarter')] <- lubridate::quarter(data_set[,feature_name], with_year = FALSE)
     #data_set[,paste0(feature_name,'_Quarter')] <- lubridate::quarter(data_set[,feature_name], with_year = TRUE)
     if (remove_original_date)
       data_set[, feature_name] <- NULL
@@ -299,7 +257,7 @@ Get_Top_Relationships <-function(data_set,correlation_abs_threshold = 0.8,pvalue
 saveHistogram <- function(dataset,featureName)
 {
   require(ggplot2)
-  if( class(dataset[[featureName]])=="character" || class(dataset[[featureName]])=="integer")
+  if( class(dataset[[featureName]])=="character")
   {
     png(filename = paste("figs/hist_", featureName, ".png"))
     #myPlot <-ggplot(data=dat, aes_string(x=disc_x, y=count_str, fill=disc_y)) + geom_bar(stat="identity") + labs(title = pval)
@@ -312,7 +270,7 @@ saveHistogram <- function(dataset,featureName)
     #h = hist(as.matrix(dataset[, featureName]))
     #h$density = h$counts / sum(h$counts) * 100
     #myPlot <-ggplot(data=dataset, aes_string(x=featureName,y="Count")) + geom_bar(stat="identity") + labs(title = paste("Histogram of",featureName))
-    myPlot <-ggplot(data=dataset, aes(dataset[[featureName]])) + geom_histogram()+ labs(x = featureName)
+    myPlot <-ggplot(data=dataset, aes(dataset[[featureName]])) + geom_histogram()
     
     savePlot(myPlot,figName)
     #png(filename = paste("figs/hist_", featureName, ".png"))
@@ -327,17 +285,15 @@ saveHistogram <- function(dataset,featureName)
 library(dplyr)
 library(lubridate)
 library(caTools)
-library(plyr)
+library(h2o)
 #-------- PARAMETER INPUT -----------
 # READING FILE
-fileName = "data.csv" # CHOOSE "data.csv" or "data_test.csv" !!!!
-#fileName = "data_num.csv" # CHOOSE "data.csv" or "data_test.csv" !!!!
+fileName = "data_test.csv" # CHOOSE "data.csv" or "data_test.csv" !!!!
 MAX_NUMBER_OF_ROWS_TO_READ = -1 # -1 for all
-targetName = "btarget"
-#targetName = "target"
-#excluded_category_feature = c("id","era","data_type") # The feature which should be excluded from categorial analysis, usually this is the id of the user which has no predictive power
-excluded_category_feature = c() # The feature which should be excluded from categorial analysis, usually this is the id of the user which has no predictive power
-#excluded_category_feature = c("customerID") # The feature which should be excluded from categorial analysis, usually this is the id of the user which has no predictive power
+targetName = "churn"
+clipped_category_feature = c("channel_sales","origin_up")
+many_level_category_features = c("activity_new")
+excluded_category_feature = c("id") # The feature which should be excluded from categorial analysis, usually this is the id of the user which has no predictive power
 FEAT_ENGINEER_FLAG = FALSE
 targetClasses = 2 # Number of classes in target. E.g. 2 for binary
 # CATEGORIAL FEATS
@@ -352,9 +308,6 @@ CORR_threshold = 0.8 # Threshold of cross correlation above which features are d
 # NA PARAMS
 Cuttoff_Missing_data = 70 # Percentage above which we exclude the feature being mostly missing
 NUMERIC_MODE_LIMIT = 20 # limit above which the numeric values are not imputed with mean but rather with the mode 
-# Outlier
-OUTLIER_FLAG = FALSE
-OUTLIER_PREC = 0.01
 # High cardinality
 RIDGE_AND_FREQ_OF_HIGH_CARDINALITY_FEATURES = FALSE
 # FIGURES
@@ -390,47 +343,14 @@ if (MAX_NUMBER_OF_ROWS_TO_READ < 1)
   
 }
 
-#library(lubridate)
-
-
-# Some feature engineering
-dataset$Time_date<-as.Date(dataset$Time,tz="UTC")
-dataset$Time_hour<-as.numeric(strftime(dataset$Time, format="%H"))
-dataset$Time<-NULL
-#dataset$btarget_1<-shift_vec(as.vector(dataset$btarget),1)
-#dataset$btarget_2<-shift_vec(as.vector(dataset$btarget),2)
-#dataset$btarget_3<-shift_vec(as.vector(dataset$btarget),3)
-dataset$WilliamsAD_1<-shift_vec(as.vector(dataset$williamsAD),1)
-dataset$WilliamsAD_2<-shift_vec(as.vector(dataset$williamsAD),2)
-dataset$WilliamsAD_3<-shift_vec(as.vector(dataset$williamsAD),3)
-dataset$ROC_1<-shift_vec(as.vector(dataset$ROC),1)
-dataset$ROC_2<-shift_vec(as.vector(dataset$ROC),2)
-dataset$ROC_3<-shift_vec(as.vector(dataset$ROC),3)
-dataset$adx_1<-shift_vec(as.vector(dataset$adx),1)
-dataset$adx_2<-shift_vec(as.vector(dataset$adx),2)
-dataset$adx_3<-shift_vec(as.vector(dataset$adx),3)
-dataset$VHF_1<-shift_vec(as.vector(dataset$VHF),1)
-dataset$VHF_2<-shift_vec(as.vector(dataset$VHF),2)
-dataset$VHF_3<-shift_vec(as.vector(dataset$VHF),3)
-
-#dataset$_1<-shift_vec(as.vector(dataset$),1)
-#dataset$_2<-shift_vec(as.vector(dataset$),2)
-#dataset$_3<-shift_vec(as.vector(dataset$),3)
-
-
-
-dataset<-target_to_the_end(dataset,targetName)
-
-
-
 
 if(length(excluded_category_feature)>0 )
 {
   if( excluded_category_feature %in% names(dataset))
   {
-  dataset[,excluded_category_feature]<-NULL
-  logs[ilog,1] <- paste("Excluded ",excluded_category_feature," from dataset", collapse=', ')
- ilog<-ilog+1
+    dataset[,excluded_category_feature]<-NULL
+    logs[ilog,1] <- paste("Excluded ",excluded_category_feature," from dataset", collapse=', ')
+    ilog<-ilog+1
   }
 } else
 {
@@ -442,7 +362,124 @@ if(length(excluded_category_feature)>0 )
 dataset$X1<-NULL
 
 
+# Dropping the list of features which were dropped in the training set
+dataset_training <- read_csv("data/data_full.csv")
+listOfDroppedFeatures<-setdiff(names(dataset),names(dataset_training))
+listOfDroppedFeatures<-setdiff(listOfDroppedFeatures,many_level_category_features)
+dataset[,listOfDroppedFeatures]<-NULL
 
+# Replacing the categories which are labeled as "Other" in the training set
+for(feat in clipped_category_feature)
+{
+  train_unique<-unique(dataset_training[,feat])
+  test_unique<-unique(dataset[,feat])
+  test_unique<-test_unique[!is.na(test_unique),]
+  classes_to_other <- setdiff(test_unique[[feat]],train_unique[[feat]])
+
+  if(length(classes_to_other)>0 )
+  {
+    inds<-!is.na(dataset[,feat]) & dataset[[feat]] %in% classes_to_other
+      if(c("Other") %in% train_unique[[feat]])
+    {
+  dataset[inds,feat]<-"Other"
+  
+    }else{
+      
+      dataset[inds,feat]<-NA
+      
+    }
+    
+  }
+
+  
+  
+  
+ }
+
+
+# Imputing NA of the clipped categorial features
+h2o.init(nthreads = -1)
+for(feat in clipped_category_feature)
+{
+  train_df <- as.h2o(dataset[!is.na(dataset[,feat]),])
+  test_df <- as.h2o(dataset[is.na(dataset[,feat]),])
+  
+  y <- feat
+  x <- setdiff(names(train_df), y)
+  
+  # For binary classification, response should be a factor
+  train_df[,y] <- as.factor(train_df[[y]])
+  test_df[,y] <- NULL
+  
+  my_gbm1 <- h2o.gbm(x = x,
+                     y = y,
+                     training_frame = train_df,
+                     distribution = "multinomial",
+                     seed = 123)
+  
+  
+  pred <- h2o.predict(my_gbm1, newdata = test_df)
+  dataset[is.na(dataset[,feat]),feat]<-as.data.frame(as.character(pred$predict))
+  
+}
+
+#feat<-"activity_new"
+# Imputing NA and encoding categorial features with their frequency occurance
+for(feat in many_level_category_features)
+{
+  
+  # Imputing
+  train_df <- as.h2o(dataset[!is.na(dataset[,feat]),])
+  test_df <- as.h2o(dataset[is.na(dataset[,feat]),])
+  y <- feat
+  x <- setdiff(names(train_df), y)
+  train_df[,y] <- as.factor(train_df[[y]])
+  test_df[,y] <- NULL
+  my_gbm1 <- h2o.gbm(x = x,
+                     y = y,
+                     training_frame = train_df,
+                     distribution = "multinomial",
+                     seed = 123)
+  pred <- h2o.predict(my_gbm1, newdata = test_df)
+  dataset[is.na(dataset[,feat]),feat]<-as.data.frame(as.character(pred$predict))
+  if(RIDGE_AND_FREQ_OF_HIGH_CARDINALITY_FEATURES)
+  {
+  
+  # Replacing with frequency table of the training set
+  LUT <- read_csv(paste0('data/',feat,'_legend.csv'))
+  
+  dataset2<-replace_feat_with_freq(dataset,feat,LUT)
+  dataset[,paste0(feat,"_freq")]<-dataset2[,paste0(feat,"_freq")]
+  
+  # Getting ridge predictions
+  glm_clf<-h2o.loadModel(paste0("models/",feat,"_ridge_model/",feat,"_ridge_model"))
+  test = as.h2o(dataset[,feat])
+  test <- as.factor(test)
+  predRidge <- h2o.predict(glm_clf,newdata = test)
+  dataset[,paste0(feat,"_ridge")] <- as.data.frame(predRidge$p1)
+  rm(dataset2)
+  
+  }
+  
+  dataset[,feat]<-NULL
+  
+  
+}
+dataset<-target_to_the_end(dataset,targetName)
+
+
+
+# Check that the test set has the same features as in the train set
+#unique(dataset_training$channel_sales)
+#unique(dataset$channel_sales)
+
+#unique(dataset_training$origin_up)
+#unique(dataset$origin_up)
+
+t<-1
+
+#catList <- feats[sapply(dataset_training[,feats],is.character)]
+#str(dataset_training)
 
 #str(dataset)
 dataset_orig <- dataset
@@ -482,8 +519,8 @@ dataset_an <- cbind(dataset_an, NA_Perc = na_count)
 
 if(sum(na_count)>0)
 {
-logs[ilog,1] <- "NA values found"
-ilog<-ilog+1
+  logs[ilog,1] <- "NA values found"
+  ilog<-ilog+1
 }else{
   
   logs[ilog,1] <- "No NA values found"
@@ -517,49 +554,55 @@ if(length(simple_Imputation_features)>0)
   logs[ilog,1] <- paste("Feature(s)",simple_Imputation_features," have some missing values", collapse=', ')
   ilog<-ilog+1
   
-numericList <- simple_Imputation_features[sapply(dataset[,simple_Imputation_features],is.numeric)]
-nonNumericList <- setdiff(simple_Imputation_features,numericList)
-logs[ilog,1] <- paste("Numeric missing:",numericList, collapse=', ')
-ilog<-ilog+1
-logs[ilog,1] <- paste("Nonnumeric missing:",nonNumericList, collapse=', ')
-ilog<-ilog+1
-
-write_csv(dataset,"train_reference.csv")
-
-# 2.1 Substituting numerics with their mean
-for (numFeat in numericList)
-{
-  featCol <- dataset[,numFeat]
-  featCol <- featCol[!is.na(featCol)]
-  md<-Mode(as.matrix(featCol))
-  if( 100*(nrow(dataset[dataset[,numFeat]==md,])/length(featCol))> NUMERIC_MODE_LIMIT  )
-  {
-    dataset_imputed[is.na(dataset_imputed[,numFeat]),numFeat]<-md
-  }else
-  {
-    dataset_imputed[[numFeat]] <- ifelse(is.na(dataset[[numFeat]]), ave(dataset[[numFeat]], FUN = function(x) mean(x, na.rm = TRUE)), dataset[[numFeat]])
-
-  }
+  numericList <- simple_Imputation_features[sapply(dataset[,simple_Imputation_features],is.numeric)]
+  nonNumericList <- setdiff(simple_Imputation_features,numericList)
+  logs[ilog,1] <- paste("Numeric missing:",numericList, collapse=', ')
+  ilog<-ilog+1
+  logs[ilog,1] <- paste("Nonnumeric missing:",nonNumericList, collapse=', ')
+  ilog<-ilog+1
   
-}
-
-# 2.2 Substituting categorial with their mode
-for (nonnumFeat in nonNumericList)
-{
-  featCol <- dataset[,nonnumFeat]
-  featCol <- featCol[!is.na(featCol)]
-  if( is.Date(dataset[[nonnumFeat]]) )
+  write_csv(dataset,"test_trial.csv")
+  
+  # 2.1 Substituting numerics with their mean
+  for (numFeat in numericList)
   {
-    md<-as.Date(Mode(as.matrix(featCol)),format = "%Y-%m-%d")
-  }else{
+    featCol <- as.data.frame(dataset[,numFeat])
+    names(featCol)[1]<-numFeat
+    featCol <- as.data.frame(featCol[!is.na(featCol),])
+    names(featCol)[1]<-numFeat
+    
     
     md<-Mode(as.matrix(featCol))
+    if( 100*(nrow(dataset[dataset[,numFeat]==md,])/nrow((featCol)))> NUMERIC_MODE_LIMIT  )
+    {
+      dataset_imputed[is.na(dataset_imputed[,numFeat]),numFeat]<-md
+    }else
+    {
+      dataset_imputed[[numFeat]] <- ifelse(is.na(dataset[[numFeat]]), ave(dataset[[numFeat]], FUN = function(x) mean(x, na.rm = TRUE)), dataset[[numFeat]])
+      
+    }
+    
   }
   
-  dataset_imputed[is.na(dataset_imputed[,nonnumFeat]),nonnumFeat]<-md
-}
-#str(dataset_imputed)
-
+  # 2.2 Substituting categorial with their mode
+  for (nonnumFeat in nonNumericList)
+  {
+    featCol <- as.data.frame(dataset[,nonnumFeat])
+    names(featCol)[1]<-nonnumFeat
+    featCol <- as.data.frame(featCol[!is.na(featCol),])
+    names(featCol)[1]<-nonnumFeat
+    if( is.Date(dataset[[nonnumFeat]]) )
+    {
+      md<-as.Date(Mode(as.matrix(featCol)),format = "%Y-%m-%d")
+    }else{
+      
+      md<-Mode(as.matrix(featCol))
+    }
+    
+    dataset_imputed[is.na(dataset_imputed[,nonnumFeat]),nonnumFeat]<-md
+  }
+  #str(dataset_imputed)
+  
 }
 
 
@@ -588,10 +631,6 @@ ilog<-ilog+1
 # Getting Number of categories of character features
 category_count <- numeric(dims[2])-1
 i<-1
-library(h2o)
-h2o.init(nthreads = -1)
-
-t<-1
 for (name in colnames(dataset))
 {
   if (lapply(dataset[,name],class)=="character")
@@ -603,73 +642,19 @@ for (name in colnames(dataset))
     {
       if(length(unique(as.matrix(dataset[,name])))>CATEGORY_CLASSES_LIMIT_THRESHOLD)
       {
-       
-        if(RIDGE_AND_FREQ_OF_HIGH_CARDINALITY_FEATURES)
-          {
-         #print(paste("The feature ",name,"has",length(unique(as.matrix(dataset[,name])))," classes which is larger than the limti of ",CATEGORY_CLASSES_LIMIT_THRESHOLD,", hence it will be removed"))
-        
-        # Replace category with its frequency occurance
-        t<-as.data.frame(table(dataset[,name]))
-        names(t)[1] = name
-        write_csv(t,paste0('data/',name,'_legend.csv'))
-        
-        #b<-transform(dataset, freq.loc = ave(seq(nrow(dataset)), activity_new, FUN=length))
-        #b<-transform(dataset, freq.loc = ave(seq(nrow(dataset)), name, FUN=length))
-        dataset[,paste0(name,"_freq")] <- ave( as.numeric(dataset[[1]]), dataset[[name]] ,FUN=length)
-        
-        
-        # Two fold glm modeling
-        set.seed(123)
-        ids1 = sample(1:nrow(dataset), round(nrow(dataset)/2))
-        ids2 = setdiff(1:nrow(dataset),ids1)
-        
-        trainRidge1 <- as.h2o(dataset[ids1,c(name,targetName)])
-        trainRidge1[,targetName]<-as.factor( trainRidge1[,targetName] )
-        trainRidge1[,name]<-as.factor( trainRidge1[,name] )
-
-        trainRidge2 <- as.h2o(dataset[ids2,c(name,targetName)])
-        trainRidge2[,targetName]<-as.factor( trainRidge2[,targetName] )
-        trainRidge2[,name]<-as.factor( trainRidge2[,name] )
-        
-        
-        # Model 1 
-        glm_clf1<-h2o.glm(x =name ,y= targetName, training_frame =trainRidge1 , family ="binomial", model_id = paste0(name,"_ridge_model"))
-        # Model 2
-        glm_clf2<-h2o.glm(x =name ,y= targetName, training_frame =trainRidge2 , family ="binomial", model_id = paste0(name,"_ridge_model"))
-
-        predRidge1 <- h2o.predict(glm_clf2,newdata = trainRidge1[,name])
-        predRidge2 <- h2o.predict(glm_clf1,newdata = trainRidge2[,name])
-        
-        dataset[ids1,paste0(name,"_ridge")] <- as.data.frame(predRidge1$p1)
-        dataset[ids2,paste0(name,"_ridge")] <- as.data.frame(predRidge2$p1)
-        
-        perf1 <- h2o.performance(glm_clf1, newdata = trainRidge2)
-        perf2 <- h2o.performance(glm_clf2, newdata = trainRidge1)
-        
-        if(h2o.auc(perf1)>h2o.auc(perf2))
-        {
-          h2o.saveModel(glm_clf1, path=paste0("models/",name,"_ridge_model"),force = TRUE)
-        }
-        else
-        {
-          h2o.saveModel(glm_clf2, path=paste0("models/",name,"_ridge_model"),force = TRUE)
-        }
-        
-        }
-        
+        print(paste("The feature ",name,"has",length(unique(as.matrix(dataset[,name])))," classes which is larger than the limti of ",CATEGORY_CLASSES_LIMIT_THRESHOLD,", hence it will be removed"))
         
         dataset[,name] <- NULL
-        
       }
-        else{
-          
-          print(paste("The feature ",name,"has",length(unique(as.matrix(dataset[,name])))," classes hence will be capped"))
-          temp_vect<-dataset[[name]]
-          temp_vect <- data.frame(table(temp_vect)) %>% arrange(desc(Freq)) %>% head(N_most_popular-1)
-          dataset[,name] <- ifelse(dataset[[name]] %in% temp_vect$temp_vect,dataset[[name]], 'Other')
-        }
+      else{
+        
+        print(paste("The feature ",name,"has",length(unique(as.matrix(dataset[,name])))," classes hence will be capped"))
+        temp_vect<-dataset[[name]]
+        temp_vect <- data.frame(table(temp_vect)) %>% arrange(desc(Freq)) %>% head(N_most_popular-1)
+        dataset[,name] <- ifelse(dataset[[name]] %in% temp_vect$temp_vect,dataset[[name]], 'Other')
+      }
+       
       
-     
     }
     
     
@@ -682,7 +667,6 @@ for (name in colnames(dataset))
 }
 
 
-dataset<-target_to_the_end(dataset,targetName)
 
 
 #----------------- SAVING THE HISTOGRAMS
@@ -714,20 +698,19 @@ if(FIGURES_FLAG)
   logs[ilog,1] <- "saving correlations between numerical features and output"
   ilog<-ilog+1
   
-# Getting the correlations between output (if categorial) and numerical features
-for (name in setdiff(numericList,targetName))
-{
-  dataset_an[name,'F-val']<-continuous_discrete_correlation(dataset, name, targetName)[1]
-  dataset_an[name,'Mean']<-mean(dataset[[name]], na.rm=TRUE)
-  dataset_an[name,'Standard_Deviation']<-sd(dataset[[name]], na.rm=TRUE)
-  
-}
+  # Getting the correlations between output (if categorial) and numerical features
+  for (name in setdiff(numericList,targetName))
+  {
+    dataset_an[name,'F-val']<-continuous_discrete_correlation(dataset, name, targetName)[1]
+    dataset_an[name,'Mean']<-mean(dataset[[name]], na.rm=TRUE)
+    dataset_an[name,'Standard_Deviation']<-sd(dataset[[name]], na.rm=TRUE)
+    
+  }
 }
 #------------------ FACTORING NON-NUMERIC DATA
 # Reorganizing data to Numerical-Categorial-Target
 catList <-setdiff(feats,c(numericList,dateList))
 dataset_organized<-cbind(dataset[,numericList],dataset[,dateList],dataset[,catList])
-names(dataset_organized)<-c(numericList,dateList,catList)
 dataset_organized<-target_to_the_end(dataset_organized,targetName)
 # Removing X1 column which shows up somewhere
 dataset_organized$X1<-NULL
@@ -747,12 +730,12 @@ if(FIGURES_FLAG)
   logs[ilog,1] <- "Saving correlations of categorial features to target"
   ilog<-ilog+1
   
-# Saving Chi2 values for categorial data
-factorList <- names(dataset_organized)[sapply(dataset_organized,is.factor)]
-for (name in setdiff(factorList,targetName))
-{
-  dataset_an[name,'Chi-val']<-discrete_discrete_correlation(dataset_organized, name, targetName)
-}
+  # Saving Chi2 values for categorial data
+  factorList <- names(dataset_organized)[sapply(dataset_organized,is.factor)]
+  for (name in setdiff(factorList,targetName))
+  {
+    dataset_an[name,'Chi-val']<-discrete_discrete_correlation(dataset_organized, name, targetName)
+  }
 }
 dataset<-dataset_organized
 
@@ -768,31 +751,7 @@ write.csv(dataset, file = paste0(saveDir,"/data_full.csv"),row.names = FALSE)
 
 
 #-------------------- OUTLIERS -----------------------
-# TODO: Think about including date in outlier detection or not
 
-if(OUTLIER_FLAG)
-{
-outlierThresh <- round(OUTLIER_PREC*nrow(dataset))+1
-i<-3
-foundFLAG = FALSE
-while(!foundFLAG & i<50 )
-{
-  ignoreList = setdiff(names(dataset),numericList)
-#res<-Identify_Outliers(dataset,outlier_sd_threshold=i,features_to_ignore = c("channel_sales","origin_up","has_gas","churn"))
-res<-Identify_Outliers(dataset,outlier_sd_threshold=i,features_to_ignore = c(ignoreList,targetName))
-
-if(res[1,2]< outlierThresh)
-{
-  foundFLAG = TRUE
-  
-  
-}
-  i<-i+1
-}
-
-dataset<-Identify_Outliers(dataset,outlier_sd_threshold=i-1,remove_outlier_observations = TRUE,features_to_ignore =  c(ignoreList,targetName))
-
-}
 
 
 
@@ -808,7 +767,7 @@ logs[ilog,1] <- " Encoding dummy variables "
 ilog<-ilog+1
 
 # Encoding dummy variables
-dataset_binarized<-Binarize_Features(dataset,leave_out_one_level=FALSE,features_to_ignore = targetName)
+dataset_binarized<-Binarize_Features(dataset,leave_out_one_level=FALSE)
 catList<-setdiff(names(dataset_binarized),names(dataset))
 logs[ilog,1] <- " Extracting date information "
 ilog<-ilog+1
@@ -836,180 +795,88 @@ for (name in feats)
 
 if(FEAT_ENGINEER_FLAG)
 {# Custom Feature engineering using polynomials
-# Log
-dataset_full$log_pow_max<-mapply(log_columns,dataset_full$pow_max,min(dataset_full$pow_max))
-dataset_full$log_imp_cons<-mapply(log_columns,dataset_full$imp_cons,min(dataset_full$imp_cons))
-#Differences
-dataset_full$contract_duration <- mapply(sub_columns,dataset_full$date_activ_DateInt,dataset_full$date_end_DateInt )
-dataset_full$contract_allowance <- mapply(sub_columns,dataset_full$date_end_DateInt,dataset_full$date_renewal_DateInt )
-
-# Ratios
-dataset_full$total_net_margin_per_product<-mapply(mult_columns,dataset_full$net_margin,1/dataset_full$nb_prod_act)
-dataset_full$gross_margin_per_product<-mapply(mult_columns,dataset_full$margin_gross_pow_ele,1/dataset_full$nb_prod_act)
-dataset_full$net_margin_per_product<-mapply(mult_columns,dataset_full$margin_net_pow_ele,1/dataset_full$nb_prod_act)
-dataset_full$last_month_per_year <- 0
-dataset_full[dataset_full$cons_12m!=0,"last_month_per_year"] <- mapply(mult_columns,dataset_full[dataset_full$cons_12m!=0,"cons_last_month"],1/dataset_full[dataset_full$cons_12m!=0,"cons_12m"])
-
-#Polynomial
-t<-as.data.frame(poly(dataset_full$date_end_DateInt,dataset_full$date_activ_DateInt,dataset_full$margin_net_pow_ele, degree=2, raw=T))
-t$`1.0.0`<-NULL
-t$`0.0.1`<-NULL
-t$`0.1.0`<-NULL
-dataset_full<-cbind(dataset_full,t)
-
-numericList<-c(numericList,"log_pow_max","log_imp_cons","total_net_margin_per_product","gross_margin_per_product","net_margin_per_product","last_month_per_year","contract_duration","contract_allowance")
-
-# Binding target at the end of the dataframe
-dataset_full<-target_to_the_end(dataset_full,targetName)
-
+  # Log
+  dataset_full$log_pow_max<-mapply(log_columns,dataset_full$pow_max,min(dataset_full$pow_max))
+  dataset_full$log_imp_cons<-mapply(log_columns,dataset_full$imp_cons,min(dataset_full$imp_cons))
+  #Differences
+  dataset_full$contract_duration <- mapply(sub_columns,dataset_full$date_activ_DateInt,dataset_full$date_end_DateInt )
+  dataset_full$contract_allowance <- mapply(sub_columns,dataset_full$date_end_DateInt,dataset_full$date_renewal_DateInt )
+  
+  # Ratios
+  dataset_full$total_net_margin_per_product<-mapply(mult_columns,dataset_full$net_margin,1/dataset_full$nb_prod_act)
+  dataset_full$gross_margin_per_product<-mapply(mult_columns,dataset_full$margin_gross_pow_ele,1/dataset_full$nb_prod_act)
+  dataset_full$net_margin_per_product<-mapply(mult_columns,dataset_full$margin_net_pow_ele,1/dataset_full$nb_prod_act)
+  dataset_full$last_month_per_year <- 0
+  dataset_full[dataset_full$cons_12m!=0,"last_month_per_year"] <- mapply(mult_columns,dataset_full[dataset_full$cons_12m!=0,"cons_last_month"],1/dataset_full[dataset_full$cons_12m!=0,"cons_12m"])
+  
+  #Polynomial
+  t<-as.data.frame(poly(dataset_full$date_end_DateInt,dataset_full$date_activ_DateInt,dataset_full$margin_net_pow_ele, degree=2, raw=T))
+  t$`1.0.0`<-NULL
+  t$`0.0.1`<-NULL
+  t$`0.1.0`<-NULL
+  dataset_full<-cbind(dataset_full,t)
+  
+  numericList<-c(numericList,"log_pow_max","log_imp_cons","total_net_margin_per_product","gross_margin_per_product","net_margin_per_product","last_month_per_year","contract_duration","contract_allowance")
+  
+  # Binding target at the end of the dataframe
+  dataset_full<-target_to_the_end(dataset_full,targetName)
+  
 }
 # Save full data
 logs[ilog,1] <- "Saving dataset with feature engineering"
 ilog<-ilog+1
 
 write.csv(dataset_full, file = paste0(saveDir,"/data_feature_eng.csv"),row.names = FALSE)
-#write_csv(dataset_an, path = "res/dataset_an.csv")
+#write.csv(dataset_an, file = "res/dataset_an.csv")
 
 
 top_correlated_numeric_features<-Get_Top_Relationships(dataset_full[,c(numericList,dateList)],correlation_abs_threshold=CORR_threshold)
 
+trainNames<-names(read_csv("data/normal/data_OFF_OFF_OFF.csv", n_max = 10))
+testNames<-names(dataset_full)
 
-#------------ FEATURE REDUCTION --------------------
+missingColumns <- setdiff(trainNames,testNames)
+
+
+dataset_full[,missingColumns]<-0
+# Binding target at the end of the dataframe
+dataset_full<-target_to_the_end(dataset_full,targetName)
+  
+#------------ Feature reduction --------------------
 logs[ilog,1] <- "------------ FEATURE REDUCTION --------------------"
 ilog<-ilog+1
 
-library(caret)
-dataset_no_target<-dataset_full[,1:ncol(dataset_full)-1]
-# PCA
-preprocessParams <- preProcess(dataset_no_target, method=c("center", "scale", "pca"), thresh = PCA_info_thresh)
-PCA_comp <- predict(preprocessParams, dataset_no_target)
-PCA_comp<-cbind(PCA_comp,dataset_full[,targetName])
-names(PCA_comp)[length(names(PCA_comp))]<-targetName
+dataset_no_target<-dataset_full[,1:ncol(dataset_full)-1] 
+  library(caret)
+  
+    #PCA
+    train_PCA = read_csv(file="data/normal/data_PCA_PCA_PCA.csv", n_max = 5)
+    components<-ncol(train_PCA)-1
+    dataset_no_target[  , missingColumns       ]<-NULL
+    preprocessParams <- preProcess(dataset_no_target, method=c("center", "scale", "pca"), pcaComp = components)
+    PCA_comp <- predict(preprocessParams, dataset_no_target)
+    PCA_comp<-cbind(PCA_comp,dataset_full[,targetName])
+    names(PCA_comp)[length(names(PCA_comp))]<-targetName
+    write.csv(PCA_comp, file="test/normal/data_PCA_PCA_PCA.csv",row.names = FALSE) 
+  
+    #CORR
+    train_CORR = read_csv(file="data/normal/data_CORR_CORR_CORR.csv", n_max = 5)
+    removeList<-setdiff(names(dataset_full),names(train_CORR))
+    CORR_comp<-dataset_full
+    CORR_comp[,removeList]<-NULL
+    write.csv(CORR_comp,file = "test/normal/data_CORR_CORR_CORR.csv",row.names = FALSE)
+    
+  
 
-write.csv(PCA_comp,file = "data/normal/data_PCA_PCA_PCA.csv",row.names = FALSE)
-
-#CORR
-preprocessParams <- preProcess(dataset_no_target, method=c("corr"), cutoff = CORR_threshold)
-CORR_comp <- predict(preprocessParams, dataset_no_target)
-CORR_comp<-cbind(CORR_comp,dataset_full[,targetName])
-names(CORR_comp)[length(names(CORR_comp))]<-targetName
-write.csv(CORR_comp,file = "data/normal/data_CORR_CORR_CORR.csv",row.names = FALSE)
-
-
-
-dataset_comp<-dataset_full
-logs[ilog,1] <- "Compressed data set after feature selection is obtained"
-ilog<-ilog+1
-
-# Write compressed feature
-write.csv(dataset_comp, file = "data/normal/data_OFF_OFF_OFF.csv",row.names = FALSE)
-
-
-#----------- BALANCING THE DATASET
-
-FEAT_REDUC_NUMERIC<-"OFF"
-FEAT_REDUC_DATES<-"OFF"
-FEAT_REDUC_CAT<-"OFF"
-
-if(BALANCE_DATASET)
-{
-  logs[ilog,1] <- "------------ BALANCING THE DATASET --------------------"
+  
+ 
+  logs[ilog,1] <- "Compressed data set after feature selection is obtained"
   ilog<-ilog+1
   
-  # Distribution of the target
-  # First check if target name is correct
-  featureNames = names(dataset_comp)
-  if (!(targetName %in% featureNames))
-  {
-    logs[ilog,1] <- "ERROR: WRONG TARGET NAME"
-    ilog<-ilog+1
-    
-    print(paste(
-      "Variable ",
-      targetName,
-      " not present in data set. Could it be ",
-      tail(featureNames, n = 1)
-    ))
-    
-    stop("-------------- Exiting ------------------------------")
-  }
+  # Write compressed feature
+  write.csv(dataset_full, file = "test/normal/data_OFF_OFF_OFF.csv",row.names = FALSE)
   
   
-  
-  # Deciding if the data is imbalanced or not
-  
-  # Changing factor to integer to be able to calculate the histogram
-  if(class(dataset_comp[, targetName])=="factor")
-  {
-  dataset_comp[,targetName]<-as.numeric(dataset_comp[,targetName])
-  dataset_comp[,targetName]<-dataset_comp[,targetName]-1
-  }
-  target_hist <-hist(as.matrix(dataset_comp[, targetName]), nclass = targetClasses)
-  
-  
-  targ_weights <- target_hist[2]
-  if (targetClasses == 2)
-  {
-    majClassRatio = (
-      max(targ_weights$counts[1], targ_weights$counts[2]) / (targ_weights$counts[1] + targ_weights$counts[2])
-    )
-    if (majClassRatio > balanceThreshold)
-    {
-      print(paste("Target is imbalanced. Ratio of majority class is", 100 * majClassRatio,"%"))
-      IMBALANCED_TARGET = TRUE
-      logs[ilog,1] <- "Target is imbalanced"
-      ilog<-ilog+1
-      
-      
-    }
-    else
-    {
-      print(paste(
-        "Target balance is OK. Ratio of majority class is",
-        100 * majClassRatio,
-        "%"
-      ))
-      IMBALANCED_TARGET = FALSE
-      logs[ilog,1] <- "Target is balanced"
-      ilog<-ilog+1
-    }
-    
-  }
-  
-  featureNames <- names(dataset_comp)
-  
-  if(IMBALANCED_TARGET)
-  {
-    library(unbalanced)
-    
-    input <- dataset_comp[,setdiff(featureNames,targetName)]
-    output <- factor(dataset_comp[,targetName])
-    #output <- factor(dataset$churn)
-    
-    
-    data<-ubBalance(X= input, Y=output, type="ubSMOTE", percOver=200, percUnder=200, verbose=TRUE)
-    balancedData<-cbind(data$X,data$Y)
-    colnames(balancedData)[length(colnames(balancedData))]<-targetName
-    dataset_comp<-balancedData
-
-    write.csv(dataset_comp, file = paste0(saveDir,"/smote/data_",FEAT_REDUC_NUMERIC,"_",FEAT_REDUC_DATES,"_",FEAT_REDUC_CAT,"_SMOTE.csv"),row.names = FALSE)
-    
-    data<-ubBalance(X= input, Y=output, type="ubUnder", verbose=TRUE)
-    balancedData<-cbind(data$X,data$Y)
-    colnames(balancedData)[length(colnames(balancedData))]<-targetName
-    dataset_comp<-balancedData
-
-    write.csv(dataset_comp, file = paste0(saveDir,"/under/data_",FEAT_REDUC_NUMERIC,"_",FEAT_REDUC_DATES,"_",FEAT_REDUC_CAT,"_UNDER.csv"),row.names = FALSE)
-    
-    
-  }
-  
-  rm(balancedData,dataset_binarized,dataset_binarized_dates,dataset_imputed,featCol,input,lis1,temp_vect,tmp,data)
-}
-
-
-
-
 
 write.table(logs, "logs.txt", sep="\t")
 
